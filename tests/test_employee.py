@@ -100,11 +100,7 @@ def create_test_employee(client, token, department_id):
 
 def test_create_employee(client, db):
     token = get_admin_token(client, db)
-
-    department_id = create_test_department(
-        client,
-        token
-    )
+    department_id = create_test_department(client, token)
 
     response = client.post(
         "/api/v1/employees/",
@@ -115,9 +111,7 @@ def test_create_employee(client, db):
             "position": "Software Developer",
             "salary": 50000
         },
-        headers={
-            "Authorization": f"Bearer {token}"
-        }
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 201
@@ -133,12 +127,7 @@ def test_create_employee(client, db):
 
 def test_update_employee(client, db):
     token = get_admin_token(client, db)
-
-    department_id = create_test_department(
-        client,
-        token
-    )
-
+    department_id = create_test_department(client, token)
     employee_id = create_test_employee(
         client,
         token,
@@ -154,9 +143,7 @@ def test_update_employee(client, db):
             "position": "Senior Software Developer",
             "salary": 65000
         },
-        headers={
-            "Authorization": f"Bearer {token}"
-        }
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -171,12 +158,7 @@ def test_update_employee(client, db):
 
 def test_delete_employee(client, db):
     token = get_admin_token(client, db)
-
-    department_id = create_test_department(
-        client,
-        token
-    )
-
+    department_id = create_test_department(client, token)
     employee_id = create_test_employee(
         client,
         token,
@@ -185,9 +167,7 @@ def test_delete_employee(client, db):
 
     response = client.delete(
         f"/api/v1/employees/{employee_id}",
-        headers={
-            "Authorization": f"Bearer {token}"
-        }
+        headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -199,7 +179,6 @@ def test_delete_employee(client, db):
 
 def test_employee_cannot_create_employee(client, db):
     admin_token = get_admin_token(client, db)
-
     department_id = create_test_department(
         client,
         admin_token
@@ -226,3 +205,46 @@ def test_employee_cannot_create_employee(client, db):
     data = response.json()
 
     assert data["detail"] == "Admin access required"
+
+
+def test_get_nonexistent_employee(client, db):
+    token = get_admin_token(client, db)
+
+    response = client.get(
+        "/api/v1/employees/99999",
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 404
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"] == "Employee not found"
+
+
+def test_create_employee_with_invalid_department(client, db):
+    token = get_admin_token(client, db)
+
+    response = client.post(
+        "/api/v1/employees/",
+        json={
+            "name": "Invalid Department Employee",
+            "email": "invaliddepartment@test.com",
+            "department_id": 99999,
+            "position": "Developer",
+            "salary": 50000
+        },
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 404
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"] == "Department not found"
