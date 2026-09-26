@@ -1,18 +1,13 @@
-
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_current_user, require_admin
 from app.core.exceptions import EmployeeManagementException
-
+from app.core.security import get_current_user, require_admin
 from app.models.employee import Employee
 from app.models.department import Department
-
-from app.schemas.employee import (
-    EmployeeCreate,
-    EmployeeResponse
-)
+from app.models.user import User
+from app.schemas.employee import EmployeeCreate, EmployeeResponse
 
 
 router = APIRouter(
@@ -23,17 +18,17 @@ router = APIRouter(
 
 # =========================
 # CREATE EMPLOYEE
-# ADMIN ONLY
 # =========================
+
 @router.post(
     "/",
     response_model=EmployeeResponse,
-    status_code=status.HTTP_201_CREATED
+    status_code=201
 )
 def create_employee(
     employee: EmployeeCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_admin)
+    current_user: User = Depends(require_admin)
 ):
     department = (
         db.query(Department)
@@ -41,7 +36,7 @@ def create_employee(
         .first()
     )
 
-    if not department:
+    if department is None:
         raise EmployeeManagementException(
             message="Department not found",
             status_code=404
@@ -75,10 +70,10 @@ def create_employee(
 
 
 # =========================
-# GET ALL / SEARCH / FILTER /
-# PAGINATION
-# AUTHENTICATED USERS
+# GET EMPLOYEES
+# SEARCH + FILTER + PAGINATION
 # =========================
+
 @router.get(
     "/",
     response_model=list[EmployeeResponse]
@@ -89,7 +84,7 @@ def get_employees(
     page: int = 1,
     limit: int = 10,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     if page < 1:
         raise EmployeeManagementException(
@@ -105,30 +100,35 @@ def get_employees(
 
     query = db.query(Employee)
 
+    # Search by employee name
     if name:
         query = query.filter(
             Employee.name.ilike(f"%{name}%")
         )
 
-    if department_id:
+    # Filter by department
+    if department_id is not None:
         query = query.filter(
             Employee.department_id == department_id
         )
 
-    skip = (page - 1) * limit
+    # Pagination
+    offset = (page - 1) * limit
 
-    return (
+    employees = (
         query
-        .offset(skip)
+        .offset(offset)
         .limit(limit)
         .all()
     )
 
+    return employees
+
 
 # =========================
 # GET EMPLOYEE BY ID
-# AUTHENTICATED USERS
 # =========================
+
 @router.get(
     "/{employee_id}",
     response_model=EmployeeResponse
@@ -136,7 +136,7 @@ def get_employees(
 def get_employee(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(get_current_user)
+    current_user: User = Depends(get_current_user)
 ):
     employee = (
         db.query(Employee)
@@ -144,7 +144,7 @@ def get_employee(
         .first()
     )
 
-    if not employee:
+    if employee is None:
         raise EmployeeManagementException(
             message="Employee not found",
             status_code=404
@@ -155,8 +155,8 @@ def get_employee(
 
 # =========================
 # UPDATE EMPLOYEE
-# ADMIN ONLY
 # =========================
+
 @router.put(
     "/{employee_id}",
     response_model=EmployeeResponse
@@ -165,7 +165,7 @@ def update_employee(
     employee_id: int,
     employee_data: EmployeeCreate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_admin)
+    current_user: User = Depends(require_admin)
 ):
     employee = (
         db.query(Employee)
@@ -173,7 +173,7 @@ def update_employee(
         .first()
     )
 
-    if not employee:
+    if employee is None:
         raise EmployeeManagementException(
             message="Employee not found",
             status_code=404
@@ -185,7 +185,7 @@ def update_employee(
         .first()
     )
 
-    if not department:
+    if department is None:
         raise EmployeeManagementException(
             message="Department not found",
             status_code=404
@@ -220,15 +220,15 @@ def update_employee(
 
 # =========================
 # DELETE EMPLOYEE
-# ADMIN ONLY
 # =========================
+
 @router.delete(
     "/{employee_id}"
 )
 def delete_employee(
     employee_id: int,
     db: Session = Depends(get_db),
-    current_user=Depends(require_admin)
+    current_user: User = Depends(require_admin)
 ):
     employee = (
         db.query(Employee)
@@ -236,7 +236,7 @@ def delete_employee(
         .first()
     )
 
-    if not employee:
+    if employee is None:
         raise EmployeeManagementException(
             message="Employee not found",
             status_code=404

@@ -128,6 +128,7 @@ def test_create_employee(client, db):
 def test_update_employee(client, db):
     token = get_admin_token(client, db)
     department_id = create_test_department(client, token)
+
     employee_id = create_test_employee(
         client,
         token,
@@ -159,6 +160,7 @@ def test_update_employee(client, db):
 def test_delete_employee(client, db):
     token = get_admin_token(client, db)
     department_id = create_test_department(client, token)
+
     employee_id = create_test_employee(
         client,
         token,
@@ -179,6 +181,7 @@ def test_delete_employee(client, db):
 
 def test_employee_cannot_create_employee(client, db):
     admin_token = get_admin_token(client, db)
+
     department_id = create_test_department(
         client,
         admin_token
@@ -248,3 +251,77 @@ def test_create_employee_with_invalid_department(client, db):
 
     assert data["success"] is False
     assert data["error"] == "Department not found"
+
+
+def test_search_employees_by_name(client, db):
+    token = get_admin_token(client, db)
+    department_id = create_test_department(client, token)
+
+    create_test_employee(
+        client,
+        token,
+        department_id
+    )
+
+    response = client.get(
+        "/api/v1/employees/?name=Test&page=1&limit=10",
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["name"] == "Test Employee"
+
+
+def test_filter_employees_by_department(client, db):
+    token = get_admin_token(client, db)
+    department_id = create_test_department(client, token)
+
+    create_test_employee(
+        client,
+        token,
+        department_id
+    )
+
+    response = client.get(
+        f"/api/v1/employees/?department_id={department_id}&page=1&limit=10",
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
+    assert data[0]["department_id"] == department_id
+
+
+def test_employee_pagination(client, db):
+    token = get_admin_token(client, db)
+    department_id = create_test_department(client, token)
+
+    create_test_employee(
+        client,
+        token,
+        department_id
+    )
+
+    response = client.get(
+        "/api/v1/employees/?page=1&limit=1",
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert len(data) == 1
