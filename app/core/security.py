@@ -19,10 +19,13 @@ from app.models.user import User
 
 load_dotenv()
 
-SECRET_KEY = os.getenv(
-    "SECRET_KEY",
-    "development-secret-key"
-)
+SECRET_KEY = os.getenv("SECRET_KEY")
+
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY is not configured. "
+        "Please add SECRET_KEY to the .env file."
+    )
 
 ALGORITHM = "HS256"
 
