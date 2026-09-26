@@ -325,3 +325,99 @@ def test_employee_pagination(client, db):
     data = response.json()
 
     assert len(data) == 1
+
+
+# =========================
+# VALIDATION / ERROR TESTS
+# =========================
+
+def test_create_employee_with_invalid_email(client, db):
+    token = get_admin_token(client, db)
+    department_id = create_test_department(client, token)
+
+    response = client.post(
+        "/api/v1/employees/",
+        json={
+            "name": "Invalid Email Employee",
+            "email": "invalid-email",
+            "department_id": department_id,
+            "position": "Developer",
+            "salary": 50000
+        },
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 422
+
+
+def test_create_employee_with_negative_salary(client, db):
+    token = get_admin_token(client, db)
+    department_id = create_test_department(client, token)
+
+    response = client.post(
+        "/api/v1/employees/",
+        json={
+            "name": "Invalid Salary Employee",
+            "email": "invalidsalary@test.com",
+            "department_id": department_id,
+            "position": "Developer",
+            "salary": -5000
+        },
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 422
+
+
+def test_employee_pagination_invalid_limit(client, db):
+    token = get_admin_token(client, db)
+
+    response = client.get(
+        "/api/v1/employees/?page=1&limit=101",
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 400
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"] == "Limit must be between 1 and 100"
+
+
+def test_duplicate_employee_email(client, db):
+    token = get_admin_token(client, db)
+    department_id = create_test_department(client, token)
+
+    create_test_employee(
+        client,
+        token,
+        department_id
+    )
+
+    response = client.post(
+        "/api/v1/employees/",
+        json={
+            "name": "Duplicate Email Employee",
+            "email": "employee@test.com",
+            "department_id": department_id,
+            "position": "Developer",
+            "salary": 55000
+        },
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
+    )
+
+    assert response.status_code == 400
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"] == "Employee with this email already exists"
