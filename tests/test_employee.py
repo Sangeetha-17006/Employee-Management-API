@@ -470,3 +470,39 @@ def test_get_employees_with_invalid_token(client):
 
     assert data["success"] is False
     assert data["error"] == "Could not validate credentials"
+
+def test_employee_cannot_update_employee(client, db):
+    admin_token = get_admin_token(client, db)
+
+    department_id = create_test_department(
+        client,
+        admin_token
+    )
+
+    employee_id = create_test_employee(
+        client,
+        admin_token,
+        department_id
+    )
+
+    employee_token = get_employee_token(client)
+
+    response = client.put(
+        f"/api/v1/employees/{employee_id}",
+        json={
+            "name": "Unauthorized Update",
+            "email": "unauthorized_update@test.com",
+            "department_id": department_id,
+            "position": "Developer",
+            "salary": 45000
+        },
+        headers={
+            "Authorization": f"Bearer {employee_token}"
+        }
+    )
+
+    assert response.status_code == 403
+
+    data = response.json()
+
+    assert data["detail"] == "Admin access required"
