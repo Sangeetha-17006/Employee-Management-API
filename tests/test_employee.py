@@ -455,3 +455,18 @@ def test_get_employees_without_authentication(client):
     )
 
     assert response.status_code == 401
+
+def test_get_employees_with_invalid_token(client):
+    response = client.get(
+        "/api/v1/employees/",
+        headers={
+            "Authorization": "Bearer invalid-token"
+        }
+    )
+
+    assert response.status_code == 401
+
+    data = response.json()
+
+    assert data["success"] is False
+    assert data["error"] == "Could not validate credentials"
