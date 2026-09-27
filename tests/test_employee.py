@@ -98,6 +98,10 @@ def create_test_employee(client, token, department_id):
     return response.json()["id"]
 
 
+# =========================
+# EMPLOYEE CRUD TESTS
+# =========================
+
 def test_create_employee(client, db):
     token = get_admin_token(client, db)
     department_id = create_test_department(client, token)
@@ -111,7 +115,9 @@ def test_create_employee(client, db):
             "position": "Software Developer",
             "salary": 50000
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
     )
 
     assert response.status_code == 201
@@ -144,7 +150,9 @@ def test_update_employee(client, db):
             "position": "Senior Software Developer",
             "salary": 65000
         },
-        headers={"Authorization": f"Bearer {token}"}
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
     )
 
     assert response.status_code == 200
@@ -169,7 +177,9 @@ def test_delete_employee(client, db):
 
     response = client.delete(
         f"/api/v1/employees/{employee_id}",
-        headers={"Authorization": f"Bearer {token}"}
+        headers={
+            "Authorization": f"Bearer {token}"
+        }
     )
 
     assert response.status_code == 200
@@ -178,6 +188,10 @@ def test_delete_employee(client, db):
 
     assert data["message"] == "Employee deleted successfully"
 
+
+# =========================
+# AUTHORIZATION TEST
+# =========================
 
 def test_employee_cannot_create_employee(client, db):
     admin_token = get_admin_token(client, db)
@@ -209,6 +223,10 @@ def test_employee_cannot_create_employee(client, db):
 
     assert data["detail"] == "Admin access required"
 
+
+# =========================
+# ERROR HANDLING TESTS
+# =========================
 
 def test_get_nonexistent_employee(client, db):
     token = get_admin_token(client, db)
@@ -252,6 +270,10 @@ def test_create_employee_with_invalid_department(client, db):
     assert data["success"] is False
     assert data["error"] == "Department not found"
 
+
+# =========================
+# SEARCH / FILTER / PAGINATION
+# =========================
 
 def test_search_employees_by_name(client, db):
     token = get_admin_token(client, db)
@@ -300,7 +322,7 @@ def test_filter_employees_by_department(client, db):
     data = response.json()
 
     assert len(data) == 1
-    assert data[0]["department_id"] == department_id
+    assert data[0]["department"]["id"] == department_id
 
 
 def test_employee_pagination(client, db):
@@ -421,3 +443,15 @@ def test_duplicate_employee_email(client, db):
 
     assert data["success"] is False
     assert data["error"] == "Employee with this email already exists"
+
+
+# =========================
+# AUTHENTICATION TEST
+# =========================
+
+def test_get_employees_without_authentication(client):
+    response = client.get(
+        "/api/v1/employees/"
+    )
+
+    assert response.status_code == 401
